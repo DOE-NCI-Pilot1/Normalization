@@ -6,4 +6,5 @@ The RNA-Seq comes from different sources (i.e., diffrenet studies). PCA of the r
 By applying ComBat the signal of source component is significantly dimished. This often improves predictive algorithms that aim to extract important biological information.
 
 <img src="README_images/Raw_RNASeq.png">
-<img src="README_images/COMBAT_RNASeq.png">
+
+<img src="README_images/ComBat_RNASeq.png">
