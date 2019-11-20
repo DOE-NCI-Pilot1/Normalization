@@ -33,7 +33,7 @@ def load_rna(datadir, logger=None, keep_cells_only=True, float_type=np.float32, 
     rna = pd.read_csv(Path(datadir)/fname, sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
     rna = rna.astype(dtype={c: float_type for c in rna.columns[1:]})  # Cast features
     rna = rna.rename(columns={c: fea_prfx_dct['rna']+c for c in rna.columns[1:] if fea_prfx_dct['rna'] not in c}) # prefix rna gene names
-    rna.rename(columns={'Sample': 'CELL'}, inplace=True) # rename cell col name
+    rna.rename(columns={'Sample': 'CELL'}, inplace=True)
 
     if logger: logger.info(f'rna.shape {rna.shape}')
     return rna
@@ -113,8 +113,6 @@ def plot_pca(df, components=[1, 2], figsize=(8, 6),
         pca_obj : object of sklearn.decomposition.PCA()
         pca : pca matrix
         fig : PCA plot figure handle
-
-    https://stackoverflow.com/questions/12236566/setting-different-color-for-each-series-in-scatter-plot-on-matplotlib
     """
     if color_vector is not None:
         assert len(df) == len(color_vector), 'len(df) and len(color_vector) must be the same size.'
