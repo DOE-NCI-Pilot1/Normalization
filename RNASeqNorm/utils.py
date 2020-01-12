@@ -24,18 +24,28 @@ fea_prfx_dct = {'rna': 'GE_', 'cnv': 'CNV_', 'snp': 'SNP_',
                 'dsc': 'DD_', 'fng': 'FNG_'}
 
 
-def load_rna(datadir, logger=None, keep_cells_only=True, float_type=np.float32, impute=True):  
+# def load_rna(datadir, logger=None, keep_cells_only=True, float_type=np.float32, impute=True):  
+def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True, float_type=np.float32, impute=True):  
     """ Load RNA-Seq data. """
-    fname = 'combined_rnaseq_data_lincs1000'
+    # fname = 'combined_rnaseq_data_lincs1000'
     na_values = ['na', '-', '']
+    if logger is None:
+        print_func = print
+    else:
+        print_func = logger.info
         
-    if logger: logger.info('\nLoad RNA-Seq ... {datadir / fname}')
-    rna = pd.read_csv(Path(datadir)/fname, sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
-    rna = rna.astype(dtype={c: float_type for c in rna.columns[1:]})  # Cast features
-    rna = rna.rename(columns={c: fea_prfx_dct['rna']+c for c in rna.columns[1:] if fea_prfx_dct['rna'] not in c}) # prefix rna gene names
+    # if logger: logger.info('\nLoad RNA-Seq ... {datadir / fname}')
+    print_func('\nLoad RNA-Seq ... {datadir / fname}')
+    # rna = pd.read_csv(Path(datadir)/fname, sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
+    rna = pd.read_csv(Path(datapath), sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
+    # rna = rna.astype(dtype={c: float_type for c in rna.columns[1:]})  # Cast features
+    # rna = rna.rename(columns={c: fea_prfx_dct['rna']+c for c in rna.columns[1:] if fea_prfx_dct['rna'] not in c}) # prefix rna gene names
+    if gene_prfx is not None:
+        rna = rna.rename(columns={c: gene_prfx+c for c in rna.columns[1:] if gene_prfx not in c}) # prefix rna gene names
     rna.rename(columns={'Sample': 'CELL'}, inplace=True)
 
-    if logger: logger.info(f'rna.shape {rna.shape}')
+    # if logger: logger.info(f'rna.shape {rna.shape}')
+    print_func(f'rna.shape {rna.shape}')
     return rna
 
 
@@ -58,6 +68,16 @@ def scale_rna(df, fea_start_id, per_source=False):
             df.iloc[:, fea_start_id:] = StandardScaler().fit_transform(df.iloc[:, fea_start_id:])
 
     return df
+
+
+def src_from_cell_col(cell_name_col, verbose=False):
+    """ Takes column that contains sample names, extract the source name, and returns the arr of source names.
+    Prints value_counts if verbose=True. """
+    src_names_arr = cell_name_col.map(lambda x: x.split('.')[0].lower())
+    src_names_arr.name = 'source'
+    if verbose:
+        print(src_names_arr.value_counts())
+    return src_names_arr
 
 
 def combat_(rna, meta, sample_col_name:str, batch_col_name:str):
@@ -175,8 +195,10 @@ def plot_pca(df, components=[1, 2], figsize=(8, 6),
                    marker='s', edgecolors='black', color='blue')
 
     if title: ax.set_title(title)
-    ax.set_xlabel('PC' + str(components[0]))
-    ax.set_ylabel('PC' + str(components[1]))
+    # ax.set_xlabel('PC' + str(components[0]))
+    # ax.set_ylabel('PC' + str(components[1]))
+    ax.set_xlabel('PC' + str(components[0]) + ' (explained var {:.3f})'.format(pca_obj.explained_variance_ratio_[pc0]))
+    ax.set_ylabel('PC' + str(components[1]) + ' (explained var {:.3f})'.format(pca_obj.explained_variance_ratio_[pc1]))
     ax.legend(loc='lower left', bbox_to_anchor=(1.01, 0.0), ncol=1, borderaxespad=0, frameon=True)
     if grid:
         plt.grid(True)
@@ -188,5 +210,7 @@ def plot_pca(df, components=[1, 2], figsize=(8, 6),
             components[0], components[1],
             pca_obj.explained_variance_ratio_[pc0],
             pca_obj.explained_variance_ratio_[pc1]))
+
+    plt.tight_layout()
 
     return pca_obj, pca, fig
