@@ -16,10 +16,12 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
+from sklearn.impute import SimpleImputer
+
 # Default settings
 default_datapath = Path('../data/combined_rnaseq_data_lincs1000')
-default_sources = ['ccle', 'nci60', 'ncipdm', 'gdc']
-src_name_map = {'ccle': 'CCLE', 'nci60': 'NCI-60', 'ncipdm': 'NCI-PDM', 'gdc': 'GDC'}
+default_sources = ['ccle', 'nci60', 'ncipdm', 'gdc', 'nova']
+src_name_map = {'ccle': 'CCLE', 'nci60': 'NCI-60', 'ncipdm': 'NCI-PDM', 'gdc': 'GDC', 'nova': 'Novartis'}
 dpi = 100
 
 # Utils
@@ -49,7 +51,7 @@ def parse_args(args):
     parser.add_argument('-dp', '--datapath', default=default_datapath, type=str, help='Full path to RNA-Seq data (default: None).')
     parser.add_argument('--src', nargs='+', default=default_sources, type=str, help='List of sources to remove batch effect (default: None).')
     parser.add_argument('--fea_prfx', default=None, type=str, help='Prefix to add to each feature (default: None).')
-    parser.add_argument('-o', '--outpath', default='./out_figs', type=str, help="Output path to store figures (default: './out_figs').")
+    parser.add_argument('-o', '--outpath', default='../out_figs', type=str, help="Output path to store figures (default: './out_figs').")
 
     args = parser.parse_args(args)
     return args
@@ -72,6 +74,24 @@ def run(args):
 
     print(f'rna.shape {rna.shape}')
     # src_from_cell_col(rna['CELL'], verbose=True);
+
+
+    # ---------------------------------------------------------
+    #   Impute missing values
+    # ---------------------------------------------------------
+    print('\nNumber of columns with missing values: {}'.format( sum(rna.iloc[:,1:].isna().sum()>0) ))
+
+    # na_idx = np.argwhere( rna.isna().values )
+    # na_x, na_y = na_idx[0,0], na_idx[0,1]
+    # print( rna.iloc[na_x, na_y] )
+
+    if sum( rna.isna().sum()>0 ):
+        imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+        rna.iloc[:,1:] = imputer.fit_transform( rna.iloc[:,1:].values )
+        print('Imputed missing values.')
+        print('\nNumber of columns with missing values: {}'.format( sum(rna.iloc[:,1:].isna().sum()>0) ))
+
+    # print( rna.iloc[na_x, na_y] )
 
 
     # ---------------------------------------------------------
