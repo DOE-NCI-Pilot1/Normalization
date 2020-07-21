@@ -12,5 +12,10 @@ This often improves predictive algorithms that aim to extract important biologic
 
 <img src="README/ComBat_RNASeq.png">
 
+## Example
+```shell
+bash scripts/run.bash
+```
+
 ## Combat
 We adapted the Python implementation of combat from this repo https://github.com/brentp/combat.py. Thanks!
