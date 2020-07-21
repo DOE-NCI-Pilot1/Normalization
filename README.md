@@ -8,13 +8,28 @@ PCA of raw expression data shows that the source carries the strognest component
 ComBat normalization significantly suppresses the signal that's coming from source component.
 This often improves predictive algorithms that aim to extract important biological information.
 
-<img src="README/Raw_RNASeq.png">
+<!---
+Data Before Dec 2019
+<p float="left">
+  <img src="README/Dec2019/pca_raw.png" width="300" height="300">
+  <img src="README/Dec2019/pca_src_scale.png" width="300" height="300">
+  <img src="README/Dec2019/pca_combat.png" width="300" height="300">
+</p>
+--->
 
-<img src="README/ComBat_RNASeq.png">
+<!--- Data Since Dec 2020 --->
+<p float="left">
+  <img src="README/Dec2019/pca_raw.png" width="300" height="250">
+  <img src="README/Dec2019/pca_src_scale.png" width="300" height="250">
+  <img src="README/Dec2019/pca_combat.png" width="300" height="250">
+</p>
 
 ## Example
+Get the required files from nciftp:
+- combined_rnaseq_data_lincs1000
+- cl_mapping
 ```shell
-bash scripts/run.bash
+bash scripts/run_Dec2019.bash
 ```
 
 ## Combat
