@@ -1,0 +1,9 @@
+.*
+!/.gitignore
+*__*
+
+notes
+/*out*/
+/data/Dec2019/
+/data/PreDec2019/
+

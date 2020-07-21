@@ -20,12 +20,13 @@ import patsy
 from combat import *
 
 
-fea_prfx_dct = {'rna': 'GE_', 'cnv': 'CNV_', 'snp': 'SNP_',
-                'dsc': 'DD_', 'fng': 'FNG_'}
+fea_prfx_dct = {'rna': 'ge_', 'cnv': 'cnv_', 'snp': 'snp_',
+                'dsc': 'dd_', 'fng': 'fng_'}
 
 
 # def load_rna(datadir, logger=None, keep_cells_only=True, float_type=np.float32, impute=True):  
-def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True, float_type=np.float32, impute=True):  
+def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True,
+             float_type=np.float32, impute=True):
     """ Load RNA-Seq data. """
     # fname = 'combined_rnaseq_data_lincs1000'
     na_values = ['na', '-', '']
@@ -35,7 +36,7 @@ def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True, float_
         print_func = logger.info
         
     # if logger: logger.info('\nLoad RNA-Seq ... {datadir / fname}')
-    print_func('\nLoad RNA-Seq ... {datadir / fname}')
+    print_func('\nLoad RNA-Seq ... {datadir/fname}')
     # rna = pd.read_csv(Path(datadir)/fname, sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
     rna = pd.read_csv(Path(datapath), sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
     # rna = rna.astype(dtype={c: float_type for c in rna.columns[1:]})  # Cast features
@@ -49,15 +50,15 @@ def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True, float_
     return rna
 
 
-def scale_rna(df, fea_start_id, per_source=False):
+def scale_rna(df, fea_start_id, sample_col_name='Sample', per_source=False):
     """ Scale df values and return updated df. """
     df = df.copy()
 
     if per_source:
-        sources = df['CELL'].map(lambda x: x.split('.')[0].lower()).unique().tolist()
+        sources = df[sample_col_name].map(lambda x: x.split('.')[0].lower()).unique().tolist()
         for i, source in enumerate(sources):
             print('Scaling {}'.format(source))
-            source_vec = df['CELL'].map(lambda x: x.split('.')[0].lower())
+            source_vec = df[sample_col_name].map(lambda x: x.split('.')[0].lower())
             source_idx_bool = source_vec.str.startswith(source)
 
             fea = df.loc[source_idx_bool, df.columns[fea_start_id:].values]
@@ -71,8 +72,10 @@ def scale_rna(df, fea_start_id, per_source=False):
 
 
 def src_from_cell_col(cell_name_col, verbose=False):
-    """ Takes column that contains sample names, extract the source name, and returns the arr of source names.
-    Prints value_counts if verbose=True. """
+    """
+    Takes column that contains sample names, extract the source name,
+    and returns the arr of source names. Prints value_counts if verbose=True.
+    """
     src_names_arr = cell_name_col.map(lambda x: x.split('.')[0].lower())
     src_names_arr.name = 'source'
     if verbose:
@@ -80,10 +83,10 @@ def src_from_cell_col(cell_name_col, verbose=False):
     return src_names_arr
 
 
-def combat_(rna, meta, sample_col_name:str, batch_col_name:str):
+def combat_(rna, meta, sample_col_name: str, batch_col_name: str):
     """
-    sample_col_name : name of the column that contains the rna samples
-    batch_col_name : name of the column that contains the batch values
+    sample_col_name: column name that contains the rna samples
+    batch_col_name: column name that contains the batch values
     """
     rna_fea, pheno, _, _ = py_df_to_R_df(data=rna, meta=meta, sample_col_name=sample_col_name)
     # dat.columns.name = None
@@ -101,10 +104,15 @@ def combat_(rna, meta, sample_col_name:str, batch_col_name:str):
 
 def R_df_to_py_df(data, sample_col_name):
     """ This is applied to the output of combat.py """
-    return data.T.reset_index().rename(columns={'index': sample_col_name})
+    data = data.T.reset_index()
+    df = data.rename(columns={'index': sample_col_name})
+    return df
 
 
-def py_df_to_R_df(data, meta, sample_col_name, filename=None, to_save=False, to_scale=False, var_thres=None):
+def py_df_to_R_df(data, meta, sample_col_name,
+                  # filename=None, to_save=False,
+                  # to_scale=False, var_thres=None
+                  ):
     """ Convert python dataframe to R dataframe (transpose). """
     # Transpose df for processing in R
     data_r = data.set_index(sample_col_name, drop=True)
@@ -112,11 +120,11 @@ def py_df_to_R_df(data, meta, sample_col_name, filename=None, to_save=False, to_
 
     # This is required for R
     meta_r = meta.set_index(sample_col_name, drop=True)
-    del meta_r.index.name
+    # del meta_r.index.name
+    meta_r.index.name = ''
     meta_r.columns.name = sample_col_name
 
     return data_r, meta_r, data, meta
-
 
 
 def plot_pca(df, components=[1, 2], figsize=(8, 6),
