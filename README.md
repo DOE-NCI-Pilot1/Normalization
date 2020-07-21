@@ -13,4 +13,4 @@ This often improves predictive algorithms that aim to extract important biologic
 <img src="README/ComBat_RNASeq.png">
 
 ## Combat
-We adapted the Python implementation combat from this repo https://github.com/brentp/combat.py. Thanks!
+We adapted the Python implementation of combat from this repo https://github.com/brentp/combat.py. Thanks!
