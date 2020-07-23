@@ -19,9 +19,9 @@ Data Before Dec 2019
 
 <!--- Data Since Dec 2020 --->
 <p float="left">
-  <img src="README/Dec2019/pca_raw.png" width="300" height="250">
-  <img src="README/Dec2019/pca_src_scale.png" width="300" height="250">
-  <img src="README/Dec2019/pca_combat.png" width="300" height="250">
+  <img src="README/July2020/pca_raw.png" width="300" height="250">
+  <img src="README/July2020/pca_src_scale.png" width="300" height="250">
+  <img src="README/July2020/pca_combat.png" width="300" height="250">
 </p>
 
 ## Example

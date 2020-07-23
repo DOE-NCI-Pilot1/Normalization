@@ -15,12 +15,11 @@ import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
 
 # Utils
-from utils import plot_pca, scale_rna, combat_
+from utils import plot_pca, scale_rna, combat_norm
 
 # Default settings
-default_datapath = Path('./data/Dec2019/combined_rnaseq_data_lincs1000')
-# default_sources = ['ccle', 'nci60', 'ncipdm', 'gdc', 'nova']
-default_sources = ['ccle', 'nci60', 'ncipdm', 'nova']
+default_datapath = Path('./data/July2020/combined_rnaseq_data_lincs1000')
+default_sources = ['ccle', 'nci60', 'ncipdm', 'gdc']
 src_name_map = {'ccle': 'CCLE', 'nci60': 'NCI-60', 'ncipdm': 'NCI-PDM',
                 'gdc': 'GDC', 'nova': 'Novartis'}
 dpi = 100
@@ -51,9 +50,9 @@ def parse_args(args):
                         default=None,
                         type=str,
                         help='Prefix to add to each feature (default: None).')
-    parser.add_argument('--include_gdc',
-                        action='store_true',
-                        help='Whether to include GDC (TCGA) data (default: False).')
+    # parser.add_argument('--include_gdc',
+    #                     action='store_true',
+    #                     help='Whether to include GDC (TCGA) data (default: False).')
 
     args = parser.parse_args(args)
     return args
@@ -94,13 +93,12 @@ def map_rna_profiles(rna, cl_map, sample_col_name='Sample'):
 
 
 def run(args):
-    import ipdb; ipdb.set_trace(context=5)
+    # import ipdb; ipdb.set_trace(context=5)
     fea_start_id = 1  # col index of the first gene feature
     datapath = Path(args.datapath)
     outpath = Path(args.outpath)
     fea_prfx = args.fea_prfx
     sample_col_name = 'Sample'
-    # sample_col_name = 'CELL'
     os.makedirs(outpath, exist_ok=True)
 
     # ---------------------------------------------------------
@@ -110,7 +108,6 @@ def run(args):
     rna = pd.read_csv(datapath, sep='\t', na_values=['na', '-', ''])
     if fea_prfx is not None:
         rna = rna.rename(columns={c: fea_prfx+c for c in rna.columns[1:] if fea_prfx not in c})
-    # rna.rename(columns={'Sample': 'CELL'}, inplace=True)
     print(f'rna.shape {rna.shape}')
 
     # Load cell line mapping
@@ -118,11 +115,15 @@ def run(args):
                              names=['from_sample', 'to_sample'])
 
     # Keep or drop GDC (TCGA)
-    if args.include_gdc is False:
-        aa = src_from_cell_col(rna[sample_col_name], verbose=False);
-        idx = (aa != 'gdc')  # non-gdc indices
-        rna = rna[idx].reset_index(drop=True)
-        src_from_cell_col(rna[sample_col_name], verbose=False);
+    # if args.include_gdc is False:
+    #     aa = src_from_cell_col(rna[sample_col_name], verbose=False);
+    #     idx = (aa != 'gdc')  # non-gdc indices
+    #     rna = rna[idx].reset_index(drop=True)
+    #     src_from_cell_col(rna[sample_col_name], verbose=False);
+
+    # Drop duplicates in sample name
+    # rna = rna.drop_duplicates(subset='Sample', keep=False)
+    # rna = rna[ ~rna.Sample.isin(['GDC.BA2440R', 'GDC.BA2063R', 'GDC.BA2633R']) ].reset_index(drop=True)
 
     # ---------------------------------------------------------
     #   Extract sources which contain original RNA-Seq
@@ -197,8 +198,13 @@ def run(args):
     meta = src_from_cell_col(rna[sample_col_name], verbose=False).to_frame()
     meta[sample_col_name] = rna[sample_col_name]
 
+    # Sample names must not have duplicates
+    assert rna[sample_col_name].nunique() == rna.shape[0], \
+        "Sample names must not have duplicates. Otherwise, ComBat results in error."
+
     # Combat scale
-    rna_combat = combat_(rna, meta, sample_col_name=sample_col_name, batch_col_name='source')
+    rna_combat = combat_norm(rna, meta, sample_col_name=sample_col_name,
+                             batch_col_name='source')
 
     plot_pca(rna_combat.iloc[:, fea_start_id:], components=[1, 2], figsize=(8, 7),
              # color_vector=src_names_arr,

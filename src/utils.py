@@ -83,10 +83,13 @@ def src_from_cell_col(cell_name_col, verbose=False):
     return src_names_arr
 
 
-def combat_(rna, meta, sample_col_name: str, batch_col_name: str):
+def combat_norm(rna, meta, sample_col_name: str, batch_col_name: str):
     """
-    sample_col_name: column name that contains the rna samples
-    batch_col_name: column name that contains the batch values
+    This function is adjusted to accept a python dataframe (rna) and transpose
+    it before applying the combat algorithm.
+    Args:
+        sample_col_name: column name that contains the rna samples
+        batch_col_name: column name that contains the batch values
     """
     rna_fea, pheno, _, _ = py_df_to_R_df(data=rna, meta=meta, sample_col_name=sample_col_name)
     # dat.columns.name = None
@@ -151,8 +154,6 @@ def plot_pca(df, components=[1, 2], figsize=(8, 6),
         assert len(df) == len(marker_vector), 'len(df) and len(marker_vector) shuold be the same size.'
         all_markers = ('o', 'v', 's', 'p', '^', '<', '>', '8', '*', 'h', 'H', 'D', 'd', 'P', 'X')
         markers = all_markers[:len(np.unique(marker_vector))]
-
-    df = df.copy()
 
     # PCA
     if scale:
