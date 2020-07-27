@@ -1,6 +1,3 @@
-import warnings
-warnings.filterwarnings('ignore')
-
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -8,7 +5,6 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import seaborn as sns
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype
 
@@ -20,53 +16,18 @@ import patsy
 from combat import *
 
 
-fea_prfx_dct = {'rna': 'ge_', 'cnv': 'cnv_', 'snp': 'snp_',
-                'dsc': 'dd_', 'fng': 'fng_'}
-
-
-# def load_rna(datadir, logger=None, keep_cells_only=True, float_type=np.float32, impute=True):  
-def load_rna(datapath, logger=None, gene_prfx=None, keep_cells_only=True,
-             float_type=np.float32, impute=True):
-    """ Load RNA-Seq data. """
-    # fname = 'combined_rnaseq_data_lincs1000'
-    na_values = ['na', '-', '']
-    if logger is None:
-        print_func = print
-    else:
-        print_func = logger.info
-        
-    # if logger: logger.info('\nLoad RNA-Seq ... {datadir / fname}')
-    print_func('\nLoad RNA-Seq ... {datadir/fname}')
-    # rna = pd.read_csv(Path(datadir)/fname, sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
-    rna = pd.read_csv(Path(datapath), sep='\t', low_memory=False, na_values=na_values, warn_bad_lines=True)
-    # rna = rna.astype(dtype={c: float_type for c in rna.columns[1:]})  # Cast features
-    # rna = rna.rename(columns={c: fea_prfx_dct['rna']+c for c in rna.columns[1:] if fea_prfx_dct['rna'] not in c}) # prefix rna gene names
-    if gene_prfx is not None:
-        rna = rna.rename(columns={c: gene_prfx+c for c in rna.columns[1:] if gene_prfx not in c}) # prefix rna gene names
-    rna.rename(columns={'Sample': 'CELL'}, inplace=True)
-
-    # if logger: logger.info(f'rna.shape {rna.shape}')
-    print_func(f'rna.shape {rna.shape}')
-    return rna
-
-
-def scale_rna(df, fea_start_id, sample_col_name='Sample', per_source=False):
+def src_norm_rna(df, fea_start_id, sample_col_name='Sample'):
     """ Scale df values and return updated df. """
-    df = df.copy()
+    sources = df[sample_col_name].map(lambda x: x.split('.')[0].lower()).unique().tolist()
 
-    if per_source:
-        sources = df[sample_col_name].map(lambda x: x.split('.')[0].lower()).unique().tolist()
-        for i, source in enumerate(sources):
-            print('Scaling {}'.format(source))
-            source_vec = df[sample_col_name].map(lambda x: x.split('.')[0].lower())
-            source_idx_bool = source_vec.str.startswith(source)
+    for i, source in enumerate(sources):
+        print('Scaling {}'.format(source))
+        source_vec = df[sample_col_name].map(lambda x: x.split('.')[0].lower())
+        source_idx_bool = source_vec.str.startswith(source)
 
-            fea = df.loc[source_idx_bool, df.columns[fea_start_id:].values]
-            fea_scaled = StandardScaler().fit_transform(fea)
-            df.loc[source_idx_bool, fea_start_id:] = fea_scaled
-    else:
-        if is_numeric_dtype(df.iloc[:, fea_start_id:]):
-            df.iloc[:, fea_start_id:] = StandardScaler().fit_transform(df.iloc[:, fea_start_id:])
+        fea = df.loc[source_idx_bool, df.columns[fea_start_id:].values]
+        fea_scaled = StandardScaler().fit_transform(fea)
+        df.loc[source_idx_bool, fea_start_id:] = fea_scaled
 
     return df
 

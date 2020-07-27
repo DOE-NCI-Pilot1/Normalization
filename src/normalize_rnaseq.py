@@ -12,10 +12,10 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 
 # Utils
-from utils import plot_pca, scale_rna, combat_norm
+from utils import plot_pca, src_norm_rna, combat_norm
 
 # Default settings
 default_datapath = Path('./data/July2020/combined_rnaseq_data_lincs1000')
@@ -23,6 +23,7 @@ default_sources = ['ccle', 'nci60', 'ncipdm', 'gdc']
 src_name_map = {'ccle': 'CCLE', 'nci60': 'NCI-60', 'ncipdm': 'NCI-PDM',
                 'gdc': 'GDC', 'nova': 'Novartis'}
 dpi = 100
+float_format = np.float32
 
 # File path
 filepath = Path(__file__).resolve().parent
@@ -93,7 +94,7 @@ def map_rna_profiles(rna, cl_map, sample_col_name='Sample'):
 
 
 def run(args):
-    # import ipdb; ipdb.set_trace(context=5)
+    import ipdb; ipdb.set_trace(context=5)
     fea_start_id = 1  # col index of the first gene feature
     datapath = Path(args.datapath)
     outpath = Path(args.outpath)
@@ -107,7 +108,8 @@ def run(args):
     print('\nLoad RNA-Seq ... {}'.format(datapath))
     rna = pd.read_csv(datapath, sep='\t', na_values=['na', '-', ''])
     if fea_prfx is not None:
-        rna = rna.rename(columns={c: fea_prfx+c for c in rna.columns[1:] if fea_prfx not in c})
+        col_rename = {c: fea_prfx+c for c in rna.columns[1:] if fea_prfx not in c}
+        rna = rna.rename(columns=col_rename)
     print(f'rna.shape {rna.shape}')
 
     # Load cell line mapping
@@ -126,13 +128,12 @@ def run(args):
     # rna = rna[ ~rna.Sample.isin(['GDC.BA2440R', 'GDC.BA2063R', 'GDC.BA2633R']) ].reset_index(drop=True)
 
     # ---------------------------------------------------------
-    #   Extract sources which contain original RNA-Seq
+    #   Extract sources that contain original RNA-Seq
     # ---------------------------------------------------------
     rna_copy = rna.copy()
     src_names_arr = src_from_cell_col(rna[sample_col_name], verbose=True)
     rna = rna_copy.loc[ src_names_arr.isin(args.src) ].reset_index(drop=True)
     print(f'rna.shape {rna.shape}')
-    src_from_cell_col(rna[sample_col_name], verbose=True);
 
     # ---------------------------------------------------------
     #   Impute missing values
@@ -145,13 +146,23 @@ def run(args):
     aa = aa.sort_values('count', ascending=False).reset_index(drop=True)
     aa.to_csv(outpath/'nan_count_per_col.csv', index=False)
 
-    # Data imputation
-    # TODO: should we consider a different approach than the mean??
-    if sum( rna.isna().sum() > 0 ):
-        print('Total columns with NaNs: {}'.format( sum(rna.iloc[:, 1:].isna().sum() > 0) ))
+    # Impute NaN values
+    if sum(rna.isna().sum() > 0):
+        print('Columns with NaNs: {}'.format( sum(rna.iloc[:, fea_start_id:].isna().sum() > 0) ))
         imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-        rna.iloc[:, 1:] = imputer.fit_transform(rna.iloc[:, 1:].values)
-        print('Total columns with NaNs: {}'.format( sum(rna.iloc[:, 1:].isna().sum() > 0) ))
+        # imputer = KNNImputer(missing_values=np.nan, n_neighbors=5,
+        #                      weights='uniform', metric='nan_euclidean',
+        #                      add_indicator=False)
+        rna.iloc[:, fea_start_id:] = imputer.fit_transform(rna.iloc[:, fea_start_id:].values)
+        print('Columns with NaNs: {}'.format( sum(rna.iloc[:, fea_start_id:].isna().sum() > 0) ))
+
+        # Impute per source
+        # TODO. There is a problem: 
+        # src_names_arr = src_from_cell_col(rna[sample_col_name], verbose=True);
+        # for s in src_names_arr.unique():
+        #     idx = (src_names_arr == s).values
+        #     imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+        #     rna.iloc[idx, 1:] = imputer.fit_transform(rna.iloc[idx, 1:].values)
 
     # ---------------------------------------------------------
     #   Raw data
@@ -166,12 +177,13 @@ def run(args):
     plt.savefig(outpath/'pca_raw.png', dpi=dpi)
 
     # ---------------------------------------------------------
-    #   Source scaling
+    #   Source Normalization
     # ---------------------------------------------------------
-    print('\nSource scaling ...')
+    print('\nSource Normalization ...')
 
     # Source scale
-    rna_src = scale_rna(rna, fea_start_id=fea_start_id, per_source=True)
+    rna_src = src_norm_rna(rna, fea_start_id=fea_start_id)
+    rna_src = rna_src.astype({c: float_format for c in rna_src.columns[fea_start_id:]})
     print(rna_src.shape)
 
     plot_pca(rna_src.iloc[:, fea_start_id:], components = [1, 2], figsize=(8, 7),
@@ -190,9 +202,9 @@ def run(args):
     # set(df.Sample.tolist()) - set(rna_copy.Sample.tolist())
 
     # ---------------------------------------------------------
-    #   Combat scaling
+    #   Combat Normalization
     # ---------------------------------------------------------
-    print('\nComBat scaling ...')
+    print('\nComBat Normalization ...')
 
     # Data for combat
     meta = src_from_cell_col(rna[sample_col_name], verbose=False).to_frame()
@@ -205,6 +217,7 @@ def run(args):
     # Combat scale
     rna_combat = combat_norm(rna, meta, sample_col_name=sample_col_name,
                              batch_col_name='source')
+    rna_combat = rna_combat.astype({c: float_format for c in rna_combat.columns[fea_start_id:]})
 
     plot_pca(rna_combat.iloc[:, fea_start_id:], components=[1, 2], figsize=(8, 7),
              # color_vector=src_names_arr,

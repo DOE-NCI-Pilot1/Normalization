@@ -9,7 +9,6 @@ dname=PreJuly2020/combined_rnaseq_data_lincs1000
 datapath=data/$dname
 outpath=out/$dname
 
-# src="ccle nci60 ncipdm nova"
 src="ccle nci60 ncipdm gdc"
 # src="ccle nci60 ncipdm"
 
